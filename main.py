@@ -84,15 +84,17 @@ async def channelmanager(client, message):
 
 # REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
 # REGEX filters. The simplest filter is ".*WHAT'S CAPTURE.*", So all messages with the word WHAT'S CAPTURE will be caught
-@app.on_message(filters.regex(".*@LTS_Server.*"))
-async def mentionmanager(client, message):
-    if message.chat.username:
-        chat_id = message.chat.username
-    else:
-        chat_id = f"c/{str(message.chat.id)[4:]}"
-    await app.send_message(getchannel(), text=f"Пинг в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
-    await message.forward(getchannel())
-    print("Mention captured")
+# Раскомментируйте строки ниже, если вы хотите получать уведомление, когда упоминают ваш юзернейм
+# Uncomment the lines below if you want to be notified when your username is mentioned
+#@app.on_message(filters.regex(".*@LTS_Server.*"))
+#async def mentionmanager(client, message):
+#    if message.chat.username:
+#        chat_id = message.chat.username
+#    else:
+#        chat_id = f"c/{str(message.chat.id)[4:]}"
+#    await app.send_message(getchannel(), text=f"Пинг в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
+#    await message.forward(getchannel())
+#    print("Mention captured")
 
 
 # REGEX фильтры. Данный фильтр отвечает за ники. ".*" в начале и конце сообщения отвечает за поимку ника в любом месте сообщения.
@@ -101,15 +103,17 @@ async def mentionmanager(client, message):
 # REGEX filters. This filter is responsible for nicknames. The ".*" at the beginning and end of the message is responsible for catching the nickname anywhere in the message.
 # In order to catch both small and large letters use [Ss]. So for the bot there is no difference, Server or server.
 # Several variants of the nickname are set through |, a straight line.
-@app.on_message(filters.regex(".*[Ss]erver-[Cc]han.*|.*[Ss]erver[Cc]han.*"))
-async def mentionmanager(client, message):
-    if not message.from_user.is_bot:
-        if message.chat.username:
-            chat_id = message.chat.username
-        else:
-            chat_id = f"c/{str(message.chat.id)[4:]}"
-        await app.send_message(getchannel(), text=f"Упоминание в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
-        await message.forward(getchannel())
-        print("Nick captured")
+# Раскомментируйте строки ниже, если вы хотите получать уведомление, когда упоминают ваш ник
+# Uncomment the lines below if you want to be notified when your nickname is mentioned
+#@app.on_message(filters.regex(".*[Ss]erver-[Cc]han.*|.*[Ss]erver[Cc]han.*"))
+#async def mentionmanager(client, message):
+#    if not message.from_user.is_bot:
+#        if message.chat.username:
+#            chat_id = message.chat.username
+#        else:
+#            chat_id = f"c/{str(message.chat.id)[4:]}"
+#        await app.send_message(getchannel(), text=f"Упоминание в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
+#        await message.forward(getchannel())
+#        print("Nick captured")
 
 app.run()
