@@ -2,7 +2,8 @@ from pyrogram import Client, filters
 import sqlite3
 import config
 
-app=Client(config.session_name, config.api_id, config.api_hash)
+app = Client(config.session_name, config.api_id, config.api_hash)
+
 
 def database_connect(command):
     conn = sqlite3.connect("Notifier.db")
@@ -16,7 +17,8 @@ def database_connect(command):
     conn.close()
     return results
 
-@app.on_message(filters.command(["addchannel", "добавитьканал"], config.command_prefix)) #Команды можно сменить или добавить, текущая команда - ">addchannel"
+
+@app.on_message(filters.command(["addchannel", "добавитьканал"], config.command_prefix))  #Команды можно сменить или добавить, текущая команда - ">addchannel"
 async def addchannel(client, message):
     if message.reply_to_message and message.from_user.is_self:
         try:
@@ -25,6 +27,7 @@ async def addchannel(client, message):
             await message.reply_text(f"Обновления канала <b>{message.reply_to_message.forward_from_chat.title}</b> будут показаны в ленте.", parse_mode="HTML")
         except Exception as Ex:
             await message.reply_text(f"Ошибка добавления канала")
+
 
 @app.on_message(filters.command(["removechannel", "удалитьканал"], config.command_prefix))
 async def addchannel(client, message):
@@ -35,6 +38,7 @@ async def addchannel(client, message):
             await message.reply_text(f"Обновления канала <b>{message.reply_to_message.forward_from_chat.title}</b> больше не будут показаны в ленте.", parse_mode="HTML")
         except Exception as Ex:
             await message.reply_text(f"Ошибка удаления канала")
+
 
 @app.on_message(filters.command(["list", "список"], config.command_prefix))
 async def channellist(client, message):
@@ -49,6 +53,7 @@ async def channellist(client, message):
             i = i+1
         await message.reply_text(text)
 
+
 @app.on_message(filters.command(["setmainchannel", "установитьглавканал"], config.command_prefix))
 async def setchannel(client, message):
     chat_id = message.sender_chat.id
@@ -57,9 +62,11 @@ async def setchannel(client, message):
     await message.delete()
     await message.reply_text(f"Данный канал установлен как лента.", parse_mode="HTML")
 
+
 def getchannel():
     data = database_connect(f"SELECT * FROM settings")
     return data[0][0]
+
 
 @app.on_message(filters.channel)
 async def channelmanager(client, message):
@@ -73,7 +80,8 @@ async def channelmanager(client, message):
     except IndexError:
         pass
 
-@app.on_message(filters.regex(".*@LTS_Server.*")) #REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
+
+@app.on_message(filters.regex(".*@LTS_Server.*"))  #REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
 async def mentionmanager(client, message):
     if message.chat.username:
         chat_id = message.chat.username
@@ -83,20 +91,18 @@ async def mentionmanager(client, message):
     await message.forward(getchannel())
     print("Mention captured")
 
+
 #REGEX фильтры. Данный фильтр отвечает за ники. ".*" в начале и конце сообщения отвечает за поимку ника в любом месте сообщения.
 #Для того, чтобы ловило и с маленькими, и с большими буквами используем [Ss]. Так для бота нет разницы, Server или server.
 #Несколько вариантов ника задаем через |, прямую черту.
 @app.on_message(filters.regex(".*[Ss]erver-[Cc]han.*|.*[Ss]erver[Cc]han.*"))
 async def mentionmanager(client, message):
     if not message.from_user.is_bot:
-
         if message.chat.username:
             chat_id = message.chat.username
         else:
             chat_id = f"c/{str(message.chat.id)[4:]}"
-        await app.send_message(getchannel(),
-                         text=f"Упоминание в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>",
-                         parse_mode="HTML")
+        await app.send_message(getchannel(), text=f"Упоминание в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
         await message.forward(getchannel())
         print("Nick captured")
 
