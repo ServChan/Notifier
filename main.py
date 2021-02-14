@@ -75,6 +75,11 @@ async def channelmanager(client, message):
 
 @app.on_message(filters.regex(".*@LTS_Server.*")) #REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
 async def mentionmanager(client, message):
+    if message.chat.username:
+        chat_id = message.chat.username
+    else:
+        chat_id = f"c/{str(message.chat.id)[4:]}"
+    await app.send_message(getchannel(), text=f"Пинг в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
     await message.forward(getchannel())
     print("Mention captured")
 
@@ -84,6 +89,14 @@ async def mentionmanager(client, message):
 @app.on_message(filters.regex(".*[Ss]erver-[Cc]han.*|.*[Ss]erver[Cc]han.*"))
 async def mentionmanager(client, message):
     if not message.from_user.is_bot:
+
+        if message.chat.username:
+            chat_id = message.chat.username
+        else:
+            chat_id = f"c/{str(message.chat.id)[4:]}"
+        await app.send_message(getchannel(),
+                         text=f"Упоминание в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>",
+                         parse_mode="HTML")
         await message.forward(getchannel())
         print("Nick captured")
 
