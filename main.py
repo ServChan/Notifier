@@ -17,8 +17,9 @@ def database_connect(command):
     conn.close()
     return results
 
-
-@app.on_message(filters.command(["addchannel", "добавитьканал"], config.command_prefix))  #Команды можно сменить или добавить, текущая команда - ">addchannel"
+# Команды можно сменить или добавить, текущая команда - ">addchannel"
+# Commands can be changed or added, the current command is ">addchannel"
+@app.on_message(filters.command(["addchannel", "добавитьканал"], config.command_prefix))
 async def addchannel(client, message):
     if message.reply_to_message and message.from_user.is_self:
         try:
@@ -81,7 +82,9 @@ async def channelmanager(client, message):
         pass
 
 
-@app.on_message(filters.regex(".*@LTS_Server.*"))  #REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
+# REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
+# REGEX filters. The simplest filter is ".*WHAT'S CAPTURE.*", So all messages with the word WHAT'S CAPTURE will be caught
+@app.on_message(filters.regex(".*@LTS_Server.*"))
 async def mentionmanager(client, message):
     if message.chat.username:
         chat_id = message.chat.username
@@ -92,9 +95,12 @@ async def mentionmanager(client, message):
     print("Mention captured")
 
 
-#REGEX фильтры. Данный фильтр отвечает за ники. ".*" в начале и конце сообщения отвечает за поимку ника в любом месте сообщения.
-#Для того, чтобы ловило и с маленькими, и с большими буквами используем [Ss]. Так для бота нет разницы, Server или server.
-#Несколько вариантов ника задаем через |, прямую черту.
+# REGEX фильтры. Данный фильтр отвечает за ники. ".*" в начале и конце сообщения отвечает за поимку ника в любом месте сообщения.
+# Для того, чтобы ловило и с маленькими, и с большими буквами используем [Ss]. Так для бота нет разницы, Server или server.
+# Несколько вариантов ника задаем через |, прямую черту.
+# REGEX filters. This filter is responsible for nicknames. The ".*" at the beginning and end of the message is responsible for catching the nickname anywhere in the message.
+# In order to catch both small and large letters use [Ss]. So for the bot there is no difference, Server or server.
+# Several variants of the nickname are set through |, a straight line.
 @app.on_message(filters.regex(".*[Ss]erver-[Cc]han.*|.*[Ss]erver[Cc]han.*"))
 async def mentionmanager(client, message):
     if not message.from_user.is_bot:
