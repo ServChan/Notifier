@@ -11,7 +11,7 @@ Based on [Pyrogram](https://github.com/pyrogram/pyrogram).
 
 ### Настройка скрипта
 1. Заполните поля в файле `config.py`, открыв его в любом текстовом редакторе.
-2. Заполните REGEX в `main.py`, открыв его в любом текстовом редакторе.
+2. Заполните REGEX в `main.py`, открыв его в любом текстовом редакторе. *[Необязательно]*
 3. Запустите скрипт и авторизуйтесь.
 
 ### Настройка ленты
@@ -35,7 +35,7 @@ The script requires data from the [site](https://my.telegram.org).
 
 ### Script setup
 1. Fill in the fields in `config.py` by opening it in any text editor
-2. Fill in the REGEX in `main.py` by opening it in any text editor
+2. Fill in the REGEX in `main.py` by opening it in any text editor *[Optional]*
 3. Run script and login.
 
 ### Customizing the feed
