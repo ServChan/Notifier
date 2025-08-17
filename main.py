@@ -1,119 +1,122 @@
-from pyrogram import Client, filters
-import sqlite3
+import sqlite3,asyncio
+from pyrogram import Client,filters
 import config
 
-app = Client(config.session_name, config.api_id, config.api_hash)
+DB_PATH="Notifier.db"
+app=Client(config.session_name,config.api_id,config.api_hash)
+CHANNELS=set()
 
+def _conn():
+    c=sqlite3.connect(DB_PATH)
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA foreign_keys=ON")
+    return c
 
-def database_connect(command):
-    conn = sqlite3.connect("Notifier.db")
-    cursor = conn.cursor()
+def ensure_schema():
+    with _conn() as c:
+        c.execute("CREATE TABLE IF NOT EXISTS settings (notifychannel_id INTEGER)")
+        c.execute("CREATE TABLE IF NOT EXISTS channels (channel_id INTEGER PRIMARY KEY)")
+        cur=c.execute("SELECT COUNT(1) FROM settings")
+        if cur.fetchone()[0]==0:
+            c.execute("INSERT INTO settings(notifychannel_id) VALUES (NULL)")
+
+def get_notify_channel():
+    with _conn() as c:
+        cur=c.execute("SELECT notifychannel_id FROM settings LIMIT 1")
+        row=cur.fetchone()
+        return row[0] if row else None
+
+def set_notify_channel(cid:int):
+    with _conn() as c:
+        c.execute("UPDATE settings SET notifychannel_id=?", (cid,))
+
+def add_channel(cid:int):
+    with _conn() as c:
+        c.execute("INSERT OR IGNORE INTO channels(channel_id) VALUES(?)",(cid,))
+    CHANNELS.add(cid)
+
+def remove_channel(cid:int):
+    with _conn() as c:
+        c.execute("DELETE FROM channels WHERE channel_id=?",(cid,))
+    CHANNELS.discard(cid)
+
+def list_channel_ids():
+    with _conn() as c:
+        return [r[0] for r in c.execute("SELECT channel_id FROM channels ORDER BY channel_id")]
+
+def refresh_channels():
+    global CHANNELS
+    CHANNELS=set(list_channel_ids())
+
+ensure_schema()
+refresh_channels()
+
+@app.on_message(filters.command(["addchannel","добавитьканал"],config.command_prefix))
+async def cmd_addchannel(client,message):
+    if not message.from_user or not message.from_user.is_self: return
+    if not message.reply_to_message or not getattr(message.reply_to_message,"forward_from_chat",None): 
+        await message.reply_text("Нужно ответить на пересланное сообщение из канала.")
+        return
+    ch=message.reply_to_message.forward_from_chat
     try:
-        cursor.execute(command)
-    except Exception as Ex:
-        print(Ex)
-    results = cursor.fetchall()
-    conn.commit()
-    conn.close()
-    return results
+        add_channel(int(ch.id))
+        await message.delete()
+        await message.reply_text(f"Канал <b>{ch.title}</b> добавлен в ленту.",parse_mode="HTML")
+    except Exception:
+        await message.reply_text("Ошибка добавления канала.")
 
-# Команды можно сменить или добавить, текущая команда - ">addchannel"
-# Commands can be changed or added, the current command is ">addchannel"
-@app.on_message(filters.command(["addchannel", "добавитьканал"], config.command_prefix))
-async def addchannel(client, message):
-    if message.reply_to_message and message.from_user.is_self:
-        try:
-            database_connect(f"INSERT INTO channels (channel_id) VALUES (\'{message.reply_to_message.forward_from_chat.id}\')")
-            await message.delete()
-            await message.reply_text(f"Обновления канала <b>{message.reply_to_message.forward_from_chat.title}</b> будут показаны в ленте.", parse_mode="HTML")
-        except Exception as Ex:
-            await message.reply_text(f"Ошибка добавления канала")
-
-
-@app.on_message(filters.command(["removechannel", "удалитьканал"], config.command_prefix))
-async def addchannel(client, message):
-    if message.reply_to_message and message.from_user.is_self:
-        try:
-            database_connect(f"DELETE FROM channels WHERE channel_id={message.reply_to_message.forward_from_chat.id}")
-            await message.delete()
-            await message.reply_text(f"Обновления канала <b>{message.reply_to_message.forward_from_chat.title}</b> больше не будут показаны в ленте.", parse_mode="HTML")
-        except Exception as Ex:
-            await message.reply_text(f"Ошибка удаления канала")
-
-
-@app.on_message(filters.command(["list", "список"], config.command_prefix))
-async def channellist(client, message):
-    if message.from_user.is_self:
-        data = database_connect("SELECT * FROM channels")
-        text = "Текущий список каналов для ленты:\n"
-        i = 1
-        for element in data:
-            chat = await client.get_chat(element["channel_id"])
-            chatname = chat.title
-            text = text + f"<b>[{i}]</b> {chatname}\n"
-            i = i+1
-        await message.reply_text(text)
-
-
-@app.on_message(filters.command(["setmainchannel", "установитьглавканал"], config.command_prefix))
-async def setchannel(client, message):
-    chat_id = message.sender_chat.id
-    database_connect(f"DELETE FROM settings")
-    database_connect(f"INSERT INTO settings (notifychannel_id) VALUES (\'{chat_id}\')")
-    await message.delete()
-    await message.reply_text(f"Данный канал установлен как лента.", parse_mode="HTML")
-
-
-def getchannel():
-    data = database_connect(f"SELECT * FROM settings")
-    return data[0][0]
-
-
-@app.on_message(filters.channel)
-async def channelmanager(client, message):
-    data = database_connect(f"SELECT * FROM channels WHERE channel_id={message.sender_chat.id}")
+@app.on_message(filters.command(["removechannel","удалитьканал"],config.command_prefix))
+async def cmd_removechannel(client,message):
+    if not message.from_user or not message.from_user.is_self: return
+    if not message.reply_to_message or not getattr(message.reply_to_message,"forward_from_chat",None):
+        await message.reply_text("Нужно ответить на пересланное сообщение из канала.")
+        return
+    ch=message.reply_to_message.forward_from_chat
     try:
-        if message.sender_chat.id == data[0][0]:
-            await message.forward(int(getchannel()))
-            print("Channel post captured")
-        else:
+        remove_channel(int(ch.id))
+        await message.delete()
+        await message.reply_text(f"Канал <b>{ch.title}</b> удалён из ленты.",parse_mode="HTML")
+    except Exception:
+        await message.reply_text("Ошибка удаления канала.")
+
+@app.on_message(filters.command(["list","список"],config.command_prefix))
+async def cmd_list(client,message):
+    if not message.from_user or not message.from_user.is_self: return
+    ids=list(CHANNELS)
+    if not ids:
+        await message.reply_text("Список каналов пуст.")
+        return
+    text="Текущий список каналов для ленты:\n"
+    i=1
+    for cid in ids:
+        title=f"ID {cid}"
+        try:
+            chat=await client.get_chat(cid)
+            title=chat.title or title
+        except Exception:
             pass
-    except IndexError:
+        text+=f"<b>[{i}]</b> {title}\n"
+        i+=1
+    await message.reply_text(text,parse_mode="HTML")
+
+@app.on_message(filters.command(["setmainchannel","установитьглавканал"],config.command_prefix))
+async def cmd_setmain(client,message):
+    try:
+        cid=int(message.chat.id)
+        set_notify_channel(cid)
+        await message.delete()
+        await message.reply_text("Этот канал установлен как лента.",parse_mode="HTML")
+    except Exception:
+        await message.reply_text("Ошибка установки ленты.")
+
+@app.on_message(filters.channel & ~filters.service)
+async def channel_forwarder(client,message):
+    try:
+        if int(message.sender_chat.id) not in CHANNELS: return
+        dst=get_notify_channel()
+        if not dst: return
+        await message.forward(int(dst))
+    except Exception:
         pass
-
-
-# REGEX фильтры. Простейший фильтр - ".*ЧТОТОЛОВИМ.*", так будут пойманы все сообщения со словом ЧТОТОЛОВИМ
-# REGEX filters. The simplest filter is ".*WHAT'S CAPTURE.*", So all messages with the word WHAT'S CAPTURE will be caught
-# Раскомментируйте строки ниже, если вы хотите получать уведомление, когда упоминают ваш юзернейм
-# Uncomment the lines below if you want to be notified when your username is mentioned
-#@app.on_message(filters.regex(".*@LTS_Server.*"))
-#async def mentionmanager(client, message):
-#    if message.chat.username:
-#        chat_id = message.chat.username
-#    else:
-#        chat_id = f"c/{str(message.chat.id)[4:]}"
-#    await app.send_message(getchannel(), text=f"Пинг в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
-#    await message.forward(getchannel())
-#    print("Mention captured")
-
-
-# REGEX фильтры. Данный фильтр отвечает за ники. ".*" в начале и конце сообщения отвечает за поимку ника в любом месте сообщения.
-# Для того, чтобы ловило и с маленькими, и с большими буквами используем [Ss]. Так для бота нет разницы, Server или server.
-# Несколько вариантов ника задаем через |, прямую черту.
-# REGEX filters. This filter is responsible for nicknames. The ".*" at the beginning and end of the message is responsible for catching the nickname anywhere in the message.
-# In order to catch both small and large letters use [Ss]. So for the bot there is no difference, Server or server.
-# Several variants of the nickname are set through |, a straight line.
-# Раскомментируйте строки ниже, если вы хотите получать уведомление, когда упоминают ваш ник
-# Uncomment the lines below if you want to be notified when your nickname is mentioned
-#@app.on_message(filters.regex(".*[Ss]erver-[Cc]han.*|.*[Ss]erver[Cc]han.*"))
-#async def mentionmanager(client, message):
-#    if not message.from_user.is_bot:
-#        if message.chat.username:
-#            chat_id = message.chat.username
-#        else:
-#            chat_id = f"c/{str(message.chat.id)[4:]}"
-#        await app.send_message(getchannel(), text=f"Упоминание в чате {message.chat.title} от {message.from_user.first_name}\n<a href = \'t.me/{chat_id}/{message.message_id}\'>Перейти</a>", parse_mode="HTML")
-#        await message.forward(getchannel())
-#        print("Nick captured")
 
 app.run()
